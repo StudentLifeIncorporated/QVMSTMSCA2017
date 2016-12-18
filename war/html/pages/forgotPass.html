@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+	<title>Request Password Reset | Dulles TMSCA Tournament</title>
+	<meta name="description" content="Reset password for a Dulles High School TMSCA Tournament user">
+	<meta name="robots" content="index, follow">
+	<meta name="tab" content="Login">
+	#include("head.html")
+	<style type="text/css">
+		body { padding-top: 60px; } /* 60px to make the container go all the way to the bottom of the topbar */
+	</style>
+</head>
+
+<body>
+	#parse("navbar.html")
+
+	<div class="container">
+		<h1>Request Password Reset</h1>
+
+		#if($updated)
+		<div class="alert alert-success">
+			<a class="close" data-dismiss="alert">&times;</a> <strong>Success! </strong>A password reset e-mail has
+			been sent to the provided e-mail address.
+		</div>
+		#end
+		
+		#if(!$updated)
+		<form method="post" class="form-horizontal">
+			<fieldset>
+				<legend>
+					Please enter your E-Mail Address below to recieve a password reset E-Mail. 
+					It is impossible for us to retrieve your original password due to the secure construction of 
+					<a href="http://en.wikipedia.org/wiki/PBKDF2" class="muted" target="_blank">PDKDF2</a>.
+				</legend>
+				<div class="control-group">
+					<label class="control-label" for="schoolName">Your E-Mail Address</label>
+					<div class="controls">
+						<input type="email" name="email" class="input-xlarge" id="email" required>
+					</div>
+				</div>
+
+				<div class="form-actions">
+					<button type="submit" id="submit" class="btn btn-primary">Request Password Reset</button>
+				</div>
+			</fieldset>
+		</form>
+		#end
+	</div>
+	#include("noscript.html")
+</body>
+</html>
+
+
+

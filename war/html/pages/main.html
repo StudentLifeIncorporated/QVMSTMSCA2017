@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html lang="en-US">
+<head>
+<title>Dulles TMSCA Tournament</title>
+	<meta name="description" content="Learn about the Dulles High School TMSCA Tournament">
+	<meta name="robots" content="index, follow">
+	#include("head.html")
+	<meta name="google-site-verification" content="F0SHVOq7MI7MOs13HytsvaPFV7qGuLBv5WrNd1faHaY">
+	<style type="text/css">
+		body { padding-top: 60px; } /* 60px to make the container go all the way to the bottom of the topbar */
+		.carousel {
+		    width: 720px;
+		    height: auto;
+		    margin: 0 auto;
+		}
+		.carousel-inner { text-align: center; }
+		.carousel .item > img { display: inline-block; }
+		.dl-horizontal dt {
+			white-space: normal;
+			width: 280px;
+			margin-right: 8px;
+		}
+		.carousel-indicators, .carousel-control, .carousel-inner {
+			display: none;
+		}
+		.loading-gif {
+			display: block;
+		    margin-left: auto;
+		    margin-right: auto;
+		    margin-top: 250px;
+		}
+		.carousel-pic {
+			vertical-align: middle;
+			height: 540px;
+		}
+	</style>
+</head>
+
+<body>
+	#parse("navbar.html")
+	
+	<div class="container">
+		#if($loggedIn)
+		<h1>Welcome, $name.</h1>
+
+		#if($admin) To manage the competition and the admin account go to the <a href="/adminPanel">Admin Control Panel</a>.
+		<br /> To view registrations, current scores and clarifications requested by coaches go to the 
+		<a href="/data?choice=overview">Data Viewer</a>.
+		
+		#else To view the scores of your students, go to the <a
+			href="/viewScores">Score Viewer</a>.
+		<h3>Your Registration Information</h3>
+		To make any changes to the following information, go to the <a href="/contactUs">Contact Us</a> page. <br />
+		<dl class="dl-horizontal"> 
+		#foreach($str in $regData) $str #end 
+		</dl>
+		<h3>Change Password</h3>
+		Go to the <a href="/changePass">Change Password</a> page to modify your account login password.
+		#end
+		#else
+		
+		<h1>About our Tournament</h1>
+		#include("aboutText.html")
+		<br/><br/>
+		
+		<img class="loading-gif" src="/img/ajax-loader.gif" title="Loading..." alt="Loading...">
+		
+        <div id="myCarousel" class="carousel slide">
+	       	<ol class="carousel-indicators">
+	       		#foreach($i in [0..$num])
+	       		<li data-target="#myCarousel" data-slide-to="$i"></li>
+	       		#end
+	       	</ol>
+	
+	        <div class="carousel-inner">
+		        <div class="item">
+		        	<div class="carousel-pic">
+		    			<img src="/img/carousel/Pic0.jpg" alt="$captions[0]" width="710px" class="img-polaroid">
+		    		</div>
+		    		<div class="carousel-caption">
+		    			<h4>$esc.html($titles[0])</h4>
+		    			<p>$esc.html($captions[0])</p>
+		    		</div>
+		        </div>
+				#foreach($i in [1..$num])
+					<div class="item">
+						<div class="carousel-pic">
+		        			<img src="/img/carousel/Pic${i}.jpg" alt="captions[$i]" width="710px" class="img-polaroid">
+		        		</div>
+		        		<div class="carousel-caption">
+		        			<h4>$esc.html($titles[$i])</h4>
+		        			<p>$esc.html($captions[$i])</p>
+		        		</div>
+		        	</div>
+				#end
+	        </div>
+	        
+	        <a class="carousel-control left" href="#myCarousel" data-slide="prev">&lsaquo;</a>
+	        <a class="carousel-control right" href="#myCarousel" data-slide="next">&rsaquo;</a>
+		</div>
+		#end
+	</div>
+	
+	#if(!$loggedIn)
+	<script type="text/javascript" src="/js/pagescripts/main.js"></script>
+	#end
+	#include("noscript.html")
+</body>
+</html>
