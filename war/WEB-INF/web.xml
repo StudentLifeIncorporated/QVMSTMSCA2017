@@ -41,8 +41,8 @@
     <servlet-class>contestWebsite.ContactUs</servlet-class>
   </servlet>
   <servlet>
-    <servlet-name>contestWebsite.ViewScores</servlet-name>
-    <servlet-class>contestWebsite.ViewScores</servlet-class>
+    <servlet-name>contestWebsite.SchoolScores</servlet-name>
+    <servlet-class>contestWebsite.SchoolScores</servlet-class>
   </servlet>
   <servlet>
     <servlet-name>contestWebsite.PublicResults</servlet-name>
@@ -65,20 +65,36 @@
     <servlet-class>contestTabulation.Main</servlet-class>
   </servlet>
   <servlet>
-    <servlet-name>errors.Prohibited_403</servlet-name>
-    <servlet-class>errors.Prohibited_403</servlet-class>
+    <servlet-name>contestTabulation.Setup</servlet-name>
+    <servlet-class>contestTabulation.Setup</servlet-class>
+  </servlet>
+  <servlet>
+    <servlet-name>contestWebsite.OAuth</servlet-name>
+    <servlet-class>contestWebsite.OAuth</servlet-class>
+  </servlet>
+  <servlet>
+    <servlet-name>contestWebsite.ClearScores</servlet-name>
+    <servlet-class>contestWebsite.ClearScores</servlet-class>
+  </servlet>
+  <servlet>
+    <servlet-name>errors.BadRequest_400</servlet-name>
+    <servlet-class>errors.BadRequest_400</servlet-class>
   </servlet>
   <servlet>
     <servlet-name>errors.Unauthorized_401</servlet-name>
     <servlet-class>errors.Unauthorized_401</servlet-class>
   </servlet>
   <servlet>
-    <servlet-name>errors.ServerError_500</servlet-name>
-    <servlet-class>errors.ServerError_500</servlet-class>
+    <servlet-name>errors.Prohibited_403</servlet-name>
+    <servlet-class>errors.Prohibited_403</servlet-class>
   </servlet>
   <servlet>
     <servlet-name>errors.NotFound_404</servlet-name>
     <servlet-class>errors.NotFound_404</servlet-class>
+  </servlet>
+  <servlet>
+    <servlet-name>errors.ServerError_500</servlet-name>
+    <servlet-class>errors.ServerError_500</servlet-class>
   </servlet>
   <servlet-mapping>
     <servlet-name>contestWebsite.MainPage</servlet-name>
@@ -123,15 +139,15 @@
   </servlet-mapping>
   <servlet-mapping>
     <servlet-name>contestWebsite.Data</servlet-name>
-    <url-pattern>/data</url-pattern>
+    <url-pattern>/data/*</url-pattern>
   </servlet-mapping>
   <servlet-mapping>
     <servlet-name>contestWebsite.ContactUs</servlet-name>
     <url-pattern>/contactUs</url-pattern>
   </servlet-mapping>
   <servlet-mapping>
-    <servlet-name>contestWebsite.ViewScores</servlet-name>
-    <url-pattern>/viewScores</url-pattern>
+    <servlet-name>contestWebsite.SchoolScores</servlet-name>
+    <url-pattern>/schoolScores</url-pattern>
   </servlet-mapping>
   <servlet-mapping>
     <servlet-name>contestWebsite.PublicResults</servlet-name>
@@ -153,36 +169,65 @@
     <servlet-name>contestTabulation.Main</servlet-name>
     <url-pattern>/tabulate</url-pattern>
   </servlet-mapping>
+  <security-constraint>
+    <web-resource-collection>
+      <web-resource-name>aname</web-resource-name>
+      <url-pattern>/tabulate</url-pattern>
+    </web-resource-collection>
+    <auth-constraint>
+      <role-name>admin</role-name>
+    </auth-constraint>
+  </security-constraint>
   <servlet-mapping>
-    <servlet-name>errors.Prohibited_403</servlet-name>
-    <url-pattern>/403</url-pattern>
+    <servlet-name>contestTabulation.Setup</servlet-name>
+    <url-pattern>/createSpreadsheet</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>contestWebsite.OAuth</servlet-name>
+    <url-pattern>/authToken</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>contestWebsite.ClearScores</servlet-name>
+    <url-pattern>/clearScores</url-pattern>
+  </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>errors.BadRequest_400</servlet-name>
+    <url-pattern>/400</url-pattern>
   </servlet-mapping>
   <servlet-mapping>
     <servlet-name>errors.Unauthorized_401</servlet-name>
     <url-pattern>/401</url-pattern>
   </servlet-mapping>
   <servlet-mapping>
-    <servlet-name>errors.ServerError_500</servlet-name>
-    <url-pattern>/500</url-pattern>
+    <servlet-name>errors.Prohibited_403</servlet-name>
+    <url-pattern>/403</url-pattern>
   </servlet-mapping>
   <servlet-mapping>
     <servlet-name>errors.NotFound_404</servlet-name>
     <url-pattern>/404</url-pattern>
   </servlet-mapping>
+  <servlet-mapping>
+    <servlet-name>errors.ServerError_500</servlet-name>
+    <url-pattern>/500</url-pattern>
+  </servlet-mapping>
 <error-page>
-  <error-code>403</error-code>
-  <location>/403</location>
+  <error-code>400</error-code>
+  <location>/400</location>
 </error-page>
 <error-page>
   <error-code>401</error-code>
   <location>/401</location>
 </error-page>
 <error-page>
-  <error-code>500</error-code>
-  <location>/500</location>
+  <error-code>403</error-code>
+  <location>/403</location>
 </error-page>
 <error-page>
   <error-code>404</error-code>
   <location>/404</location>
+</error-page>
+<error-page>
+  <error-code>500</error-code>
+  <location>/500</location>
 </error-page>
 </web-app>

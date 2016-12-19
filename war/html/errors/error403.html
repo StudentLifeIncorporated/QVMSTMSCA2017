@@ -2,21 +2,18 @@
 
 <html lang="en-US">
 <head>
-<title>Dulles TMSCA Tournament | 403 Forbidden</title>
-    <meta name="description" content="403 Forbidden Error">
-    <meta name="robots" content="index, follow">
-    #include("head.html")
-    <style type="text/css">
-	    body { padding-top: 60px; } /* 60px to make the container go all the way to the bottom of the topbar */
-    </style>
+<title>403 Forbidden | $title</title>
+	<meta name="description" content="403 Forbidden Error">
+	<meta name="robots" content="index, follow">
+	#parse("head.html")
 </head>
 
 <body>
 	#parse("navbar.html")
-	
+
 	<div class="container">
 		<h1>403 Forbidden Error</h1>
-		<h3>You don't have the necessary permissions to access that page. Try <a href="/login">logging</a> in with elevated privileges.</h3>
+		<h3>You don't have the necessary permissions to access that page. Try <a href="/login?redirect=$uri">logging</a> in with elevated privileges.</h3>
 		#parse("diaginfo.html")
 	</div>
 	#include("noscript.html")

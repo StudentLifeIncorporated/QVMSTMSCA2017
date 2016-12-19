@@ -1,4 +1,5 @@
-/* Component of GAE Project for Dulles TMSCA Contest Automation
+/*
+ * Component of GAE Project for TMSCA Contest Automation
  * Copyright (C) 2013 Sushain Cherivirala
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -8,32 +9,32 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see [http://www.gnu.org/licenses/]. 
+ * along with this program. If not, see [http://www.gnu.org/licenses/].
  */
 
 package contestWebsite;
 
 import java.io.IOException;
-import java.io.StringWriter;
-import java.net.URLEncoder;
+import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 
-import util.HTMLCompressor;
+import util.BaseHttpServlet;
+import util.Pair;
 import util.Password;
 import util.UserCookie;
 
@@ -43,107 +44,115 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.FilterOperator;
+import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.appengine.api.datastore.Transaction;
+import com.google.appengine.api.datastore.TransactionOptions;
 
 @SuppressWarnings("serial")
-public class Login extends HttpServlet
-{
-	public void doGet(HttpServletRequest req, HttpServletResponse resp)	throws IOException
-	{
+public class Login extends BaseHttpServlet {
+	@Override
+	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		UserCookie userCookie = UserCookie.getCookie(req);
 		boolean loggedIn = userCookie != null && userCookie.authenticate();
-		if(loggedIn && !userCookie.isAdmin())
+		if (loggedIn && !userCookie.isAdmin()) {
 			resp.sendRedirect("/signout");
-		else
-		{
+		}
+		else {
 			VelocityEngine ve = new VelocityEngine();
 			ve.setProperty(RuntimeConstants.FILE_RESOURCE_LOADER_PATH, "html/pages, html/snippets");
 			ve.init();
-			Template t = ve.getTemplate("login.html");
 			VelocityContext context = new VelocityContext();
-			
+			Pair<Entity, UserCookie> infoAndCookie = init(context, req);
+
 			String user = req.getParameter("user");
 			String error = req.getParameter("error");
-			context.put("year", Calendar.getInstance().get(Calendar.YEAR));
 			context.put("username", user == null ? "" : user);
-			context.put("loggedIn", false);
 
-			if("401".equals(error))
+			if ("401".equals(error)) {
 				error = "Invalid login";
-			else if("403".equals(error))
+			}
+			else if ("403".equals(error)) {
 				error = "Maximum login attempts exceeded, please reset your password";
-			else
+			}
+			else {
 				error = null;
+			}
 			context.put("error", error);
-			
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-			Query query = new Query("contestInfo");
-			List<Entity> infos = datastore.prepare(query).asList(FetchOptions.Builder.withLimit(1));
-			if(infos.size() > 0 && infos.get(0).getProperty("testingMode") != null && (Boolean) infos.get(0).getProperty("testingMode"))
-				context.put("testingMode", true);
 
-			StringWriter sw = new StringWriter();
-			t.merge(context, sw);
-			sw.close();
-			resp.setContentType("text/html");
-			resp.setHeader("X-Frame-Options", "SAMEORIGIN");
-			resp.getWriter().print(HTMLCompressor.customCompress(sw));
+			Entity contestInfo = infoAndCookie.x;
+			if (contestInfo != null && contestInfo.hasProperty("testingMode") && (Boolean) contestInfo.getProperty("testingMode")) {
+				context.put("testingMode", true);
+			}
+
+			close(context, ve.getTemplate("login.html"), resp);
 		}
 	}
 
-	public void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException
-	{
+	@Override
+	public void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-		String username = req.getParameter("username");
+		String username = req.getParameter("username").toLowerCase();
 		String password = req.getParameter("password");
-		@SuppressWarnings("deprecation")
-		Query query = new Query("user").addFilter("user-id", FilterOperator.EQUAL, username);
-		List<Entity> users = datastore.prepare(query).asList(FetchOptions.Builder.withLimit(3));
-		String hash = "";
-		String salt = "";
-		if(users.size() == 0)
-			resp.sendRedirect("/login?user=" + username + "&error=" + "401");
-		else
-		{
+
+		String redirect = req.getParameter("redirect");
+		if (redirect == null) {
+			redirect = "/?refresh=1";
+		}
+
+		Query query = new Query("user").setFilter(new FilterPredicate("user-id", FilterOperator.EQUAL, username));
+		List<Entity> users = datastore.prepare(query).asList(FetchOptions.Builder.withLimit(1));
+		String hash = "", salt = "";
+		if (users.size() == 0) {
+			resp.sendRedirect("/login?user=" + username + "&error=401&redirect=" + redirect);
+		}
+		else {
 			Entity user = users.get(0);
 			hash = (String) user.getProperty("hash");
 			salt = (String) user.getProperty("salt");
 
-			Transaction txn = datastore.beginTransaction();
-			try
-			{	
-				if(Password.check(password, salt + "$" + hash))
-				{
-					String newHash = Password.getSaltedHash(password);
-					Cookie cookie = new Cookie("user-id", URLEncoder.encode(username + "$" + newHash.split("\\$")[1], "UTF-8"));
-					cookie.setMaxAge("stay".equals(req.getParameter("signedIn")) ? -1 : 3600);
+			Transaction txn = datastore.beginTransaction(TransactionOptions.Builder.withXG(true));
+			try {
+				if (Password.check(password, salt + "$" + hash)) {
+					SecureRandom random = new SecureRandom();
+					String authToken = new BigInteger(130, random).toString(32);
+
+					Entity token = new Entity("authToken");
+					token.setProperty("user-id", username);
+					token.setProperty("token", authToken);
+					user.setProperty("loginAttempts", 0);
+
+					boolean persistent = "stay".equals(req.getParameter("signedIn"));
+					Calendar calendar = Calendar.getInstance();
+					if (persistent) {
+						calendar.add(Calendar.WEEK_OF_YEAR, 1);
+					}
+					else {
+						calendar.add(Calendar.MINUTE, 120);
+					}
+					token.setProperty("expires", new Date(calendar.getTimeInMillis()));
+
+					Cookie cookie = new Cookie("authToken", authToken);
+					cookie.setValue(authToken);
 					resp.addCookie(cookie);
 
-					user.setProperty("salt", newHash.split("\\$")[0]);
-					user.setProperty("hash", newHash.split("\\$")[1]);
-					user.removeProperty("loginAttempts");
+					datastore.put(token);
 					datastore.put(user);
-					resp.sendRedirect("/?refresh=1");
+					resp.sendRedirect(redirect);
 				}
-				else
-				{
+				else {
 					Long loginAttempts = (Long) user.getProperty("loginAttempts");
-					if(loginAttempts == null)
-					{
+					if (loginAttempts == null) {
 						user.setProperty("loginAttempts", 1);
-						resp.sendRedirect("/login?user=" + username + "&error=" + "401");
+						resp.sendRedirect("/login?user=" + username + "&error=401&redirect=" + redirect);
 					}
-					else
-					{
-						if(loginAttempts >= 30)
-						{
+					else {
+						if (loginAttempts >= 30) {
 							user.setProperty("loginAttempts", ++loginAttempts);
-							resp.sendRedirect("/login?user=" + username + "&error=" + "403");
+							resp.sendRedirect("/login?user=" + username + "&error=403&redirect=" + redirect);
 						}
-						else
-						{
+						else {
 							user.setProperty("loginAttempts", ++loginAttempts);
-							resp.sendRedirect("/login?user=" + username + "&error=" + "401");
+							resp.sendRedirect("/login?user=" + username + "&error=401&redirect=" + redirect);
 						}
 					}
 
@@ -152,15 +161,14 @@ public class Login extends HttpServlet
 
 				txn.commit();
 			}
-			catch(Exception e)
-			{
+			catch (Exception e) {
 				e.printStackTrace();
 				resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.toString());
 			}
-			finally
-			{
-				if(txn.isActive())
+			finally {
+				if (txn.isActive()) {
 					txn.rollback();
+				}
 			}
 		}
 	}

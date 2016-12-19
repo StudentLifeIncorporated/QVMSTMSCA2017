@@ -2,15 +2,12 @@
 
 <html lang="en-US">
 <head>
-	<title>Contact Us | Dulles TMSCA Tournament</title>
-	<meta name="description" content="Contact us for clarifications and registration changes regarding the Dulles High School TMSCA Tournament">
+	<title>Contact Us | $title</title>
+	<meta name="description" content="Contact us for clarifications and registration changes regarding the $title">
 	<meta name="robots" content="index, follow">
 	<meta name="tab" content="ContactUs">
-	#include("head.html")
-	<style type="text/css">
-		body { padding-top: 60px; } /* 60px to make the container go all the way to the bottom of the topbar */
-		legend { margin: 0px; }
-	</style>
+	#parse("head.html")
+	<script type="text/javascript" src='https://www.google.com/recaptcha/api.js'></script>
 </head>
 
 <body>
@@ -25,73 +22,68 @@
 		#else
 		<form method="post" class="form-horizontal">
 			<fieldset>
-				<legend>Please contact us for any <em>clarifications</em> or <em>registration changes</em>. 
-				#if(!$loggedIn && !$admin) 
+				<legend>Please contact us for any <em>clarifications</em> or <em>general questions</em>.
+				#if(!$loggedIn && !$admin)
 				Please <a href="/login">login</a> before submitting questions if you have an account. Thank you!
 				#end
 				</legend>
-				
-				<div class="control-group">
-					<label class="control-label" for="name">Your Name</label>
-					<div class="controls">
-						<div class="input-prepend">
-	      					<span class="add-on"><i class="icon-user"></i></span> 
-	      					<input type="text" name="name" class="input-xlarge" id="name" #if($name) value="$name" readonly #else required #end>
+
+				<div class="form-group">
+					<label class="col-sm-2 col-xs-4 control-label" for="name">Your Name</label>
+					<div class="input-prepend col-sm-5 col-xs-8">
+						<div class="input-group">
+							<span class="input-group-addon"><i class="glyphicon glyphicon-user"></i></span>
+							<input type="text" name="name" class="form-control" id="name" #if($name) value="$name" #end #if($loggedIn && !$admin) readonly #else required #end>
 						</div>
 					</div>
 				</div>
 
-				<div class="control-group">
-					<label class="control-label" for="email">Your E-Mail Address</label>
-					<div class="controls">
-						<div class="input-prepend">
-		      				<span class="add-on"><i class="icon-envelope"></i></span> 
-		      				<input type="email" name="email" class="input-xlarge" id="email" #if($email) value="$email" readonly #else required #end>
+				<div class="form-group">
+					<label class="col-sm-2 col-xs-4 control-label" for="email">Your E-Mail Address</label>
+					<div class="input-prepend col-sm-5 col-xs-8">
+						<div class="input-group">
+							<span class="input-group-addon"><i class="glyphicon glyphicon-envelope"></i></span>
+							<input type="email" name="email" class="form-control" id="email" #if($email) value="$email" #end #if($loggedIn && !$admin) readonly #else required #end>
 						</div>
 					</div>
 				</div>
 
-				<div class="control-group">
-					<label class="control-label" for="school">Official School Name</label>
-					<div class="controls">
-						<input type="text" name="school" class="input-xlarge" id="school" #if($school) value="$school"
-							readonly #else required #end>
+				<div class="form-group">
+					<label class="col-sm-2 col-xs-4 control-label" for="school">Official School Name</label>
+					<div class="col-sm-5 col-xs-8">
+						<input type="text" name="school" class="form-control" id="school" #if($school) value="$school" #end #if($loggedIn && !$admin) readonly #else required #end>
 						<p class="help-block">The school with which you are affiliated</p>
 					</div>
 				</div>
 
-				<div class="control-group">
-					<label class="control-label" for="message">Your Message</label>
-					<div class="controls">
-						<textarea class="input-xlarge" id="message" rows="5" name="text" required></textarea>
+				<div class="form-group">
+					<label class="col-sm-2 col-xs-4 control-label" for="message">Your Message</label>
+					<div class="col-sm-5 col-xs-8">
+						<textarea class="form-control" id="message" rows="5" name="text" required #if($name && $email && $school) autofocus #end>#if($comment)$comment#end</textarea>
 					</div>
 				</div>
 
 				#if(!$nocaptcha)
-				<div class="control-group">
-					<label class="control-label" for="captcha">CAPTCHA</label>
-					<div class="controls">
-						<input type="text" name="captcha" class="input-small" id="captcha" required>
-						<span class="help-inline">Answer the question below in the box provided</span>
-						<p class="help-block">$captcha</p>
+				<div class="form-group">
+					<div class="col-xs-offset-1 col-sm-offset-2">
+						<div class="g-recaptcha" data-sitekey="$publicKey"></div>
+						#if($captchaError) <span class="help-block text-danger lead">Incomplete captcha, try again.</span> #end
 					</div>
 				</div>
-				#end 
-				
-				<input type="hidden" name="hash" id="hash" value="$hash" /> <input type="hidden" name="nocaptcha"
-					id="nocaptcha" value="$nocaptcha" /> <input type="hidden" name="salt" id="salt" value="$salt" />
+				#end
 
-				<div class="form-actions">
-					<button type="submit" id="submit" class="btn btn-primary">Submit Feedback</button>
-					<p class="help-inline" id="answerCaptcha">Please enable JavaScript to continue.</p>
+				<div class="form-group">
+					<div class="col-sm-offset-2 col-sm-10">
+						<button type="submit" id="submit" class="btn btn-primary">Submit Feedback</button>
+						<span class="help-block lead" id="answerCaptcha">Please enable JavaScript to continue.</span>
+					</div>
 				</div>
 			</fieldset>
 		</form>
 		#end
 	</div>
 
-	<script type="text/javascript" src="/js/md5hash.js"></script>
-	<script type="text/javascript" src="/js/pagescripts/contactUs.js"></script>
+	<script type="text/javascript" src="/js/pagescripts/contactUs.js?$applicationVersion"></script>
 	#include("noscript.html")
 </body>
 </html>

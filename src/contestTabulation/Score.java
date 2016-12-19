@@ -1,4 +1,5 @@
-/* Component of GAE Project for Dulles TMSCA Contest Automation
+/*
+ * Component of GAE Project for TMSCA Contest Automation
  * Copyright (C) 2013 Sushain Cherivirala
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -8,119 +9,228 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see [http://www.gnu.org/licenses/]. 
+ * along with this program. If not, see [http://www.gnu.org/licenses/].
  */
 
 package contestTabulation;
 
-public class Score implements Comparable<Score>
-{
-	final private String score;
-	Score(String score) { this.score = score; }
-	public String getScore() { return score; }
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-	public int getScoreNum()
-	{
-		try { return Integer.parseInt(score); }
-		catch(NumberFormatException e) { return Integer.parseInt(score.substring(0,score.length()-1)); }
+import javax.jdo.annotations.PersistenceCapable;
+import javax.jdo.annotations.Persistent;
+
+import util.Pair;
+
+@PersistenceCapable
+public class Score implements Comparable<Score>, java.io.Serializable {
+	private static final long serialVersionUID = 1631716116306090911L;
+
+	private static final String FLAG_FORMAT = "(?i)^(NS|NG|DQ)$";
+	private static final String LETTER_FORMAT = "^((?:[\\+-])?[0-9]+)([A-z])?$";
+	private static final String DECIMAL_FORMAT = "^((?:[\\+-])?[0-9]+)(?:\\.([0-9]+))?$";
+
+	public static boolean isScore(String str) {
+		return str.matches(FLAG_FORMAT) || str.matches(LETTER_FORMAT) || str.matches(DECIMAL_FORMAT);
 	}
 
-	public int hashCode()
-	{
+	@Persistent private Pair<Integer, Integer> score; // Number, Modifier
+	@Persistent private boolean isNumeric = true;
+
+	Score(String score) {
+		score = Objects.requireNonNull(score).trim();
+
+		try {
+			Integer scoreNum, scoreMod;
+
+			if (score.matches(FLAG_FORMAT)) {
+				Pattern pattern = Pattern.compile(FLAG_FORMAT);
+				Matcher matcher = pattern.matcher(score);
+				matcher.matches();
+
+				Flag flag = Flag.fromString(matcher.group(1));
+				scoreNum = flag.flagNum;
+				scoreMod = 0;
+				isNumeric = false;
+			}
+			else if (score.matches(LETTER_FORMAT)) {
+				Pattern pattern = Pattern.compile(LETTER_FORMAT);
+				Matcher matcher = pattern.matcher(score);
+				matcher.matches();
+
+				scoreNum = Integer.parseInt(matcher.group(1), 10);
+				if (matcher.group(2) != null) {
+					char letter = matcher.group(2).toUpperCase().charAt(0);
+					if (letter >= 'A' && letter <= 'Z') {
+						scoreMod = letter - 64;
+					}
+					else {
+						throw new IllegalArgumentException("Invalid letter modifier");
+					}
+				}
+				else {
+					scoreMod = 0;
+				}
+			}
+			else if (score.matches(DECIMAL_FORMAT)) {
+				Pattern pattern = Pattern.compile(DECIMAL_FORMAT);
+				Matcher matcher = pattern.matcher(score);
+				matcher.matches();
+
+				scoreNum = Integer.parseInt(matcher.group(1), 10);
+				if (matcher.group(2) != null) {
+					scoreMod = Integer.parseInt(matcher.group(2), 10);
+				}
+				else {
+					scoreMod = 0;
+				}
+			}
+			else {
+				throw new IllegalArgumentException("Invalid score format");
+			}
+
+			this.score = new Pair<Integer, Integer>(scoreNum, scoreMod);
+		}
+		catch (IllegalArgumentException e) {
+			throw e;
+		}
+		catch (Exception e) {
+			throw new IllegalArgumentException("Unable to parse score");
+		}
+
+		if (Math.abs(this.score.x) > 401 && isNumeric) {
+			throw new IllegalArgumentException("Score larger than expected: " + this.score.x);
+		}
+
+		if (this.score.y > 26 && isNumeric) {
+			throw new IllegalArgumentException("Score modifier larger than expected: " + this.score.y);
+		}
+	}
+
+	@Override
+	public int compareTo(Score other) {
+		if (other.equals(this)) {
+			return 0;
+		}
+		else {
+			Pair<Integer, Integer> otherScore = other.getScore();
+			Pair<Integer, Integer> thisScore = this.getScore();
+
+			if (!thisScore.x.equals(otherScore.x)) {
+				return thisScore.x - otherScore.x;
+			}
+			else {
+				return otherScore.y - thisScore.y;
+			}
+		}
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		Score other = (Score) obj;
+		if (score == null) {
+			if (other.score != null) {
+				return false;
+			}
+		}
+		else if (!score.equals(other.score)) {
+			return false;
+		}
+		return true;
+	}
+
+	public Pair<Integer, Integer> getScore() {
+		return score;
+	}
+
+	public int getScoreNum() {
+		return score.x;
+	}
+
+	public int getScoreMod() {
+		return score.y;
+	}
+
+	public boolean isNumeric() {
+		return isNumeric;
+	}
+
+	@Override
+	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((score == null) ? 0 : score.hashCode());
+		result = prime * result + (score == null ? 0 : score.hashCode());
 		return result;
 	}
 
-	public boolean equals(Object obj)
-	{
-		if(this == obj)
-			return true;
-		if(obj == null)
-			return false;
-		if(getClass() != obj.getClass())
-			return false;
-		Score other = (Score) obj;
-		if(score == null)
-		{
-			if (other.score != null)
-				return false;
+	@Override
+	public String toString() {
+		if (isNumeric) {
+			return score.x.toString() + (score.y != 0 ? (char) (score.y + 64) : "");
 		}
-		else if(!score.equals(other.score))
-			return false;
-		return true;
+		else {
+			return Flag.fromFlagNum(score.x).toString();
+		}
 	}
 
-	public int compareTo(Score other)
-	{
-		if(other.equals(this))
-			return 0;
+	public enum Flag {
+		NS(-401), DQ(-402);
 
-		int thisScore = 0;
-		int otherScore = 0;
+		public static Flag fromString(String flagName) {
+			flagName = Objects.requireNonNull(flagName).trim();
 
-		if(isInteger(getScore()) && isInteger(other.getScore()))
-			return Integer.parseInt(getScore()) - Integer.parseInt(other.getScore());
-		else if(isInteger(getScore()) && !isInteger(other.getScore()))
-		{
-			thisScore = Integer.parseInt(getScore());
-			otherScore = Integer.parseInt(other.getScore().substring(0, other.getScore().length()-1));
-			if(thisScore == otherScore)
-				return 0;
-			else
-				return thisScore - otherScore;
-		}
-		else if(!isInteger(getScore()) && isInteger(other.getScore()))
-		{
-			thisScore = Integer.parseInt(getScore().substring(0, getScore().length()-1));
-			otherScore = Integer.parseInt(other.getScore());
-			if(thisScore == otherScore)
-				return 0;
-			else
-				return thisScore - otherScore;
-		}
-		else
-		{
-			thisScore = Integer.parseInt(getScore().substring(0, getScore().length()-1));
-			otherScore = Integer.parseInt(other.getScore().substring(0, other.getScore().length()-1));
-			if(thisScore == otherScore)
-			{
-				char thisScoreLetter = getScore().charAt(getScore().length()-1);
-				char otherScoreLetter = other.getScore().charAt(other.getScore().length()-1);
-				return otherScoreLetter - thisScoreLetter;
+			if (flagName.equalsIgnoreCase("NS") || flagName.equalsIgnoreCase("NG")) {
+				return NS;
 			}
-			else
-				return thisScore - otherScore;
+			else if (flagName.equalsIgnoreCase("DQ")) {
+				return DQ;
+			}
+			else {
+				throw new IllegalArgumentException();
+			}
 		}
-	}
 
-	public String toString() { return "Score [score=" + score + "]"; }
+		public static Flag fromFlagNum(int flagNum) {
+			switch (flagNum) {
+				case -401:
+					return NS;
+				case -402:
+					return DQ;
+				default:
+					throw new IllegalArgumentException();
+			}
+		}
 
-	private static boolean isInteger(String str)
-	{
-		if(str == null)
-			return false;
-		int length = str.length();
-		if(length == 0)
-			return false;
-		int i = 0;
-		if(str.charAt(0) == '-')
-		{
-			if (length == 1)
-				return false;
-			i = 1;
+		public final int flagNum;
+
+		private Flag(int flagNum) {
+			this.flagNum = flagNum;
 		}
-		for(; i < length; i++)
-		{
-			char c = str.charAt(i);
-			if (c <= '/' || c >= ':')
-				return false;
+
+		@Override
+		public String toString() {
+			switch (flagNum) {
+				case -401:
+					return "NS";
+				case -402:
+					return "DQ";
+				default:
+					throw new UnsupportedOperationException();
+			}
 		}
-		return true;
 	}
 }

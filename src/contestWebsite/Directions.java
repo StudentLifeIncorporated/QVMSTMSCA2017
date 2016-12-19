@@ -1,4 +1,5 @@
-/* Component of GAE Project for Dulles TMSCA Contest Automation
+/*
+ * Component of GAE Project for TMSCA Contest Automation
  * Copyright (C) 2013 Sushain Cherivirala
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -8,57 +9,54 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see [http://www.gnu.org/licenses/]. 
+ * along with this program. If not, see [http://www.gnu.org/licenses/].
  */
 
 package contestWebsite;
 
 import java.io.IOException;
-import java.io.StringWriter;
-import java.util.Calendar;
+import java.util.HashMap;
 
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
+import org.apache.velocity.tools.generic.EscapeTool;
+import org.yaml.snakeyaml.Yaml;
 
-import util.HTMLCompressor;
+import util.BaseHttpServlet;
+import util.Pair;
 import util.UserCookie;
 
+import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.Text;
+
 @SuppressWarnings("serial")
-public class Directions extends HttpServlet
-{
-	public void doGet(HttpServletRequest req, HttpServletResponse resp)	throws IOException
-	{
+public class Directions extends BaseHttpServlet {
+	@Override
+	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		VelocityEngine ve = new VelocityEngine();
 		ve.setProperty(RuntimeConstants.FILE_RESOURCE_LOADER_PATH, "html/pages, html/snippets");
 		ve.init();
-		Template t = ve.getTemplate("directions.html");
 		VelocityContext context = new VelocityContext();
-		
-		UserCookie userCookie = UserCookie.getCookie(req);
-		boolean loggedIn = userCookie != null && userCookie.authenticate();
 
-		context.put("year", Calendar.getInstance().get(Calendar.YEAR));
-		context.put("loggedIn", loggedIn);
-		if(loggedIn)
-		{
-			context.put("user", userCookie.getUsername());
-			context.put("admin", userCookie.isAdmin());
-		}
-		StringWriter sw = new StringWriter();
-		t.merge(context, sw);
-		sw.close();
-		resp.setContentType("text/html");
-		resp.setHeader("X-Frame-Options", "SAMEORIGIN");
-		resp.getWriter().print(HTMLCompressor.customCompress(sw));
+		init(context, req);
+		Pair<Entity, UserCookie> infoAndCookie = init(context, req);
+
+		Yaml yaml = new Yaml();
+		HashMap<String, String> directions = (HashMap<String, String>) yaml.load(((Text) infoAndCookie.x.getProperty("directions")).getValue());
+		context.put("directions", directions);
+		context.put("school", infoAndCookie.x.getProperty("school"));
+		context.put("location", infoAndCookie.x.getProperty("location"));
+		context.put("address", infoAndCookie.x.getProperty("address"));
+		context.put("esc", new EscapeTool());
+
+		close(context, ve.getTemplate("directions.html"), resp);
 	}
 }

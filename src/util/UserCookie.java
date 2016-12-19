@@ -1,4 +1,5 @@
-/* Component of GAE Project for Dulles TMSCA Contest Automation
+/*
+ * Component of GAE Project for TMSCA Contest Automation
  * Copyright (C) 2013 Sushain Cherivirala
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -8,17 +9,18 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see [http://www.gnu.org/licenses/]. 
+ * along with this program. If not, see [http://www.gnu.org/licenses/].
  */
 
 package util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.util.Date;
 import java.util.List;
 
 import javax.servlet.http.Cookie;
@@ -29,93 +31,84 @@ import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Query;
+import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
+import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
+import com.google.appengine.api.datastore.Query.FilterPredicate;
 
-public class UserCookie extends Cookie
-{
-	public UserCookie(String name, String value)
-	{
+public class UserCookie extends Cookie {
+	private static final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
+	private String username;
+
+	private UserCookie(String name, String value) {
 		super(name, value);
 	}
 
-	public UserCookie(Cookie cookie)
-	{
+	private UserCookie(Cookie cookie) {
 		super(cookie.getName(), cookie.getValue());
 		setComment(cookie.getComment());
 		String domain = cookie.getDomain();
-		if(domain != null)
+		if (domain != null) {
 			setDomain(domain);
+		}
 		setPath(cookie.getPath());
 		setMaxAge(cookie.getMaxAge());
 		setSecure(cookie.getSecure());
 		setVersion(cookie.getVersion());
 	}
-	
-	public static UserCookie getCookie(HttpServletRequest req)
-	{
+
+	public static UserCookie getCookie(HttpServletRequest req) {
 		Cookie[] cookies = req.getCookies();
-		if(cookies != null)
-			for(Cookie cookie : cookies)
-				if(cookie.getName().equals("user-id"))
+		if (cookies != null) {
+			for (Cookie cookie : cookies) {
+				if (cookie.getName().equals("authToken")) {
 					return new UserCookie(cookie);
+				}
+			}
+		}
 		return null;
 	}
 
-	public String getUsername() throws UnsupportedEncodingException
-	{
-		String cookieContent = URLDecoder.decode(getValue(), "UTF-8");
-		return cookieContent.split("\\$")[0];
+	public String getUsername() {
+		return username;
 	}
-	
-	public boolean isAdmin() throws UnsupportedEncodingException
-	{
-		String cookieContent = URLDecoder.decode(getValue(), "UTF-8");
-		return "admin".equals(cookieContent.split("\\$")[0]);
+
+	public boolean isAdmin() {
+		return "admin".equals(username);
 	}
-	
-	public boolean authenticate()
-	{
-		try
-		{
-			String cookieContent = URLDecoder.decode(getValue(), "UTF-8");
-			if(cookieContent.split("\\$").length != 2)
-				return false;
-			String user = cookieContent.split("\\$")[0];
-			String hash = cookieContent.split("\\$")[1];
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-			@SuppressWarnings("deprecation")
-			Query query = new Query("user").addFilter("user-id", FilterOperator.EQUAL, user);
-			List<Entity> users = datastore.prepare(query).asList(FetchOptions.Builder.withLimit(3));
-			return users.size() != 0 && users.get(0).getProperty("hash").equals(hash);
+
+	public boolean authenticate() throws UnsupportedEncodingException {
+		Entity token = getToken(URLDecoder.decode(getValue(), "UTF-8"));
+
+		if (token != null) {
+			username = (String) token.getProperty("user-id");
+			return true;
 		}
-		catch(UnsupportedEncodingException e)
-		{
+		else {
 			return false;
 		}
 	}
 
-	@SuppressWarnings("deprecation")
-	public Entity authenticateUser()
-	{
-		try
-		{
-			String cookieContent = URLDecoder.decode(getValue(), "UTF-8");
-			if(cookieContent.split("\\$").length != 2)
-				return null;
-			String user = cookieContent.split("\\$")[0];
-			String hash = cookieContent.split("\\$")[1];
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
-			Query query = new Query("user").addFilter("user-id", FilterOperator.EQUAL, user);
-			List<Entity> users = datastore.prepare(query).asList(FetchOptions.Builder.withLimit(1));
-			if(users.size() != 0 && users.get(0).getProperty("hash").equals(hash))
-				return users.get(0);
-			else
-				return null;
+	public Entity authenticateUser() throws UnsupportedEncodingException {
+		Entity token = getToken(URLDecoder.decode(getValue(), "UTF-8"));
+
+		if (token != null) {
+			username = (String) token.getProperty("user-id");
+
+			Query query = new Query("user").setFilter(new FilterPredicate("user-id", FilterOperator.EQUAL, username));
+			return datastore.prepare(query).asList(FetchOptions.Builder.withLimit(1)).get(0);
 		}
-		catch(UnsupportedEncodingException e)
-		{
+		else {
 			return null;
 		}
 	}
 
+	private static Entity getToken(String token) {
+		Filter tokenFilter = new FilterPredicate("token", FilterOperator.EQUAL, token);
+		Filter expireFilter = new FilterPredicate("expires", FilterOperator.GREATER_THAN, new Date());
+		Query query = new Query("authToken").setFilter(CompositeFilterOperator.and(tokenFilter, expireFilter));
+
+		List<Entity> tokens = datastore.prepare(query).asList(FetchOptions.Builder.withLimit(1));
+		return !tokens.isEmpty() ? tokens.get(0) : null;
+	}
 }
